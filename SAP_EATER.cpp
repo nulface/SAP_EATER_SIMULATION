@@ -20,7 +20,7 @@ int main()
     //program portion of RAM
     RAM[0] = LDA | 0xD;
     RAM[1] = SUB | 0xE;
-    RAM[2] = JZ | 0x7;
+    RAM[2] = JZ  | 0x7;
     RAM[3] = LDA | 0xD;
     RAM[4] = ADD | 0xF;
     RAM[5] = STA | 0xD;
@@ -34,9 +34,10 @@ int main()
     RAM[0xF] = 0x01;
 
 
-    //A and B registers
+    //A, B, and SUM registers
     int A = 0;
     int B = 0;
+    int SUM;
 
     //output register
     int out = 0;
@@ -46,6 +47,10 @@ int main()
 
     //instruction register
     int IR = 0;
+
+    //Data bus
+    //data cannot move directly between registers, it must move through the bus
+    int BUS = 0;
 
     //flagged when result of arithmetic carrys
     bool carryFlag = false;
@@ -67,14 +72,18 @@ int main()
         case NOP:
             //do nothing
             std::cout << "NOP" << std::endl;
-            IR = (RAM[++PC] & 0xF0);
+            BUS = (RAM[++PC] & 0xF0);
+            IR = BUS;
             break;
 
         case LDA:
 
-            A = RAM[RAM[PC] & 0x0F];
+            BUS = RAM[RAM[PC] & 0x0F];
+            A = BUS;
 
-            IR = (RAM[++PC] & 0xF0);
+
+            BUS = (RAM[++PC] & 0xF0);
+            IR = BUS;
             std::cout << "LDA: " << A << std::endl;
             break;
 
@@ -83,18 +92,24 @@ int main()
             carryFlag = false;
             zeroFlag = false;
 
-            B = RAM[RAM[PC] & 0x0F];
-            A += B;
+            BUS = RAM[RAM[PC] & 0x0F];
+            B = BUS;
 
-            if (A == 0) zeroFlag = true;
+            SUM = A + B;
 
-            if (A & 0x100) { 
+            if (SUM == 0) zeroFlag = true;
+
+            if (SUM & 0x100) { 
                 carryFlag = true;
-                A = A & 0xFF;
+                SUM = SUM & 0xFF;
             }
 
-            std::cout << "ADD: " << A << std::endl;
-            IR = (RAM[++PC] & 0xF0);
+            BUS = SUM;
+            A = BUS;
+
+            std::cout << "ADD: " << SUM << std::endl;
+            BUS = (RAM[++PC] & 0xF0);
+            IR = BUS;
             break;
 
         case SUB:
@@ -102,12 +117,16 @@ int main()
             zeroFlag = false;
             B = RAM[RAM[PC] & 0x0F];
             
-            A -= B;
+            SUM = A - B;
 
-            if (A == 0) zeroFlag = true;
+            if (SUM == 0) zeroFlag = true;
 
-            std::cout << "SUB: " << A << std::endl;
-            IR = (RAM[++PC] & 0xF0);
+            BUS = SUM;
+            A = BUS;
+
+            std::cout << "SUB: " << SUM << std::endl;
+            BUS = (RAM[++PC] & 0xF0);
+            IR = BUS;
             break;
 
         case STA:
@@ -115,7 +134,8 @@ int main()
             RAM[RAM[PC] & 0x0F] = A;
             
             std::cout << "STA: " << A << " @ " << (RAM[PC] & 0x0F) << std::endl;
-            IR = (RAM[++PC] & 0xF0);
+            BUS = (RAM[++PC] & 0xF0);
+            IR = BUS;
             break;
 
         case LDI:
@@ -123,15 +143,18 @@ int main()
             A = RAM[RAM[PC] & 0x0F];
 
             std::cout << "LDI: " << A << " from: " << (int)(RAM[PC] & 0x0F) << std::endl;
-            IR = (RAM[++PC] & 0xF0);
+            BUS = (RAM[++PC] & 0xF0);
+            IR = BUS;
             break;
 
         case JMP:
 
-            PC = RAM[PC] & 0x0F;
+            BUS = RAM[PC] & 0x0F;
+            PC = BUS;
 
             std::cout << "JMP: " << (int)PC << std::endl;
-            IR = (RAM[PC] & 0xF0);
+            BUS = (RAM[PC] & 0xF0);
+            IR = BUS;
             break;
 
         case JC:
@@ -139,31 +162,38 @@ int main()
             if (carryFlag) {
                 PC = RAM[PC] & 0x0F;
                 carryFlag = false;
-                IR = (RAM[PC] & 0xF0);
+                BUS = (RAM[PC] & 0xF0);
             }
             else
-                IR = (RAM[++PC] & 0xF0);
+                BUS = (RAM[++PC] & 0xF0);
+
+            IR = BUS;
 
             std::cout << "JC: " << (int)PC << std::endl;
             break;
 
         case JZ:
             if (zeroFlag) {
-                PC = RAM[PC] & 0x0F;
+                BUS = RAM[PC] & 0x0F;
+                PC = BUS;
                 zeroFlag = false;
-                IR = (RAM[PC] & 0xF0);
+                BUS = (RAM[PC] & 0xF0);
             }
             else
-                IR = (RAM[++PC] & 0xF0);
+                BUS = (RAM[++PC] & 0xF0);
 
+            IR = BUS;
             std::cout << "JZ: " << (int)PC << std::endl;
             break;
 
         case OUT:
             
-            out = A;
+            BUS = A;
+            out = BUS;
+
             std::cout << "OUT: " << (int)out << std::endl;
-            IR = (RAM[++PC] & 0xF0);
+            BUS = (RAM[++PC] & 0xF0);
+            IR = BUS;
             break;
 
         case HLT:
